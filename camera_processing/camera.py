@@ -1,13 +1,8 @@
 import cv2
 import numpy as np
 
-
-
 def image_callback(frame):
-
-	
 	return frame
-
 
 cap = cv2.VideoCapture(0)
 while True:
@@ -22,4 +17,3 @@ while True:
         break
 cap.release()
 cv2.destroyAllWindows()
-

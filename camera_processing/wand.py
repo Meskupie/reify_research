@@ -3,139 +3,137 @@ import numpy as np
 
 from linalghelpers import lineEndPointsOnImage
 
-# #The pink
-# TOP_HUE = 350
-# TOP_RANGE = 30
-# TOP_UPPER_SATURATION = 0.2
-# TOP_LOWER_SATURATION = 0.03
-# TOP_UPPER_BRIGHTNESS = 1.0
-# TOP_LOWER_BRIGHTNESS = 0.9
+class Marker():
+	def __init__(self):
+		pass
+
+	def detectMarker(self,img):
+		raise NotImplementedError
+
+	def getReadableMask(self,img):
+		raise NotImplementedError
+	
+	# Hue (what colour), Saturation (white to colour) Value (dark to vibrant)
+	def maskColor(self,img_hsv,hue_center,hue_radius,
+		upper_sat=1.0,lower_sat=0.3,upper_val=1.0,lower_val=0.3):
+		#TODO: hue_rad > 180 = bad, darkness bounds, whiteness bounds
+		# handle color rollaround
+		if hue_center+hue_radius > 360:
+			hue_center = hue_center-360
+		if hue_center-hue_radius < 0:
+			#above zero
+			lower = (0,255*lower_sat,255*lower_val)
+			upper = (int((hue_center+hue_radius)/2),255*upper_sat,255*upper_val)
+			mask_part_1 = cv2.inRange(img_hsv,np.array(lower,dtype = "uint8"),np.array(upper,dtype = "uint8"))
+			#below zero
+			lower = (int((360+hue_center-hue_radius)/2),255*lower_sat,255*lower_val)
+			upper = (179,255*upper_sat,255*upper_val)
+			mask_part_2 = cv2.inRange(img_hsv,np.array(lower,dtype = "uint8"),np.array(upper,dtype = "uint8"))
+			mask = mask_part_1 | mask_part_2
+		else:  
+			lower = (int((hue_center-hue_radius)/2),255*lower_sat,255*lower_val)
+			upper = (int((hue_center+hue_radius)/2),255*upper_sat,255*upper_val)
+			mask = cv2.inRange(img_hsv,np.array(lower,dtype = "uint8"),np.array(upper,dtype = "uint8"))
+		return mask
 
 #The pink aura
-TOP_HUE = 345 #310-30
-TOP_RANGE = 35
-TOP_UPPER_SATURATION = 0.2
-TOP_MIDDLE_SATURATION = 0.03
-TOP_LOWER_SATURATION = 0.0
-TOP_UPPER_BRIGHTNESS = 1.0
-TOP_MIDDLE_BRIGHTNESS = 0.97
-TOP_LOWER_BRIGHTNESS = 0.85
+class ActiveBallMarker(Marker):
+	def __init__(self, hue, hue_range, u_sat, m_sat, l_sat, u_bright, m_bright, l_bright):
+		self.IMAGE_BLUR = 3
+		self.MAX_BALL_RAD = 20
+		self.CIRCULARITY_SENSITIVITY = 5 #1-5ish range
+		self.PUPIL_BLUR = 5 # must be odd
 
-# # The yellow
-# BOTTOM_HUE = 130
-# BOTTOM_RANGE = 40
-# BOTTOM_UPPER_SATURATION = 0.2
-# BOTTOM_LOWER_SATURATION = 0.03
-# BOTTOM_UPPER_BRIGHTNESS = 1.0
-# BOTTOM_LOWER_BRIGHTNESS = 0.9
+		self.hue = hue
+		self.hue_range = hue_range
+		self.u_sat = u_sat
+		self.m_sat = m_sat
+		self.l_sat = l_sat
+		self.u_bright = u_bright
+		self.m_bright = m_bright
+		self.l_bright = l_bright
+		super().__init__()
 
-# The green aura
-BOTTOM_HUE = 120 # 80-160
-BOTTOM_RANGE = 40
-BOTTOM_UPPER_SATURATION = 0.2
-BOTTOM_MIDDLE_SATURATION = 0.03
-BOTTOM_LOWER_SATURATION = 0.0
-BOTTOM_UPPER_BRIGHTNESS = 1.0
-BOTTOM_MIDDLE_BRIGHTNESS = 0.97
-BOTTOM_LOWER_BRIGHTNESS = 0.85
+	def prepareImage(self,img):
+		blurred_img = cv2.GaussianBlur(img, (self.IMAGE_BLUR, self.IMAGE_BLUR), 0)
+		hsv_img = cv2.cvtColor(blurred_img,cv2.COLOR_BGR2HSV)
+		return hsv_img
 
+	def getPupilMask(self,hsv_img):
+		mask = self.maskColor(hsv_img,self.hue,self.hue_range,self.m_sat,self.l_sat,self.u_bright,self.m_bright)
+		
+		kernel = cv2.getStructuringElement(cv2.MORPH_ELLIPSE,(self.PUPIL_BLUR,self.PUPIL_BLUR))
+		mask = cv2.dilate(mask, kernel, iterations=1)
+		mask = cv2.erode(mask, kernel, iterations=1)
+		return mask
 
-# Hue (what colour), Saturation (white to colour) Value (dark to vibrant)
-def maskColor(img_hsv, hue_center, hue_radius,
-	upper_sat=1.0, lower_sat=0.3, upper_val=1.0, lower_val=0.3):
-	#TODO: hue_rad > 180 = bad, darkness bounds, whiteness bounds
-	# handle color rollaround
-	if hue_center+hue_radius > 360:
-		hue_center = hue_center-360
-	if hue_center-hue_radius < 0:
-		#above zero
-		lower = (0,255*lower_sat,255*lower_val)
-		upper = (int((hue_center+hue_radius)/2),255*upper_sat,255*upper_val)
-		mask_part_1 = cv2.inRange(img_hsv,np.array(lower,dtype = "uint8"),np.array(upper,dtype = "uint8"))
-		#below zero
-		lower = (int((360+hue_center-hue_radius)/2),255*lower_sat,255*lower_val)
-		upper = (179,255*upper_sat,255*upper_val)
-		mask_part_2 = cv2.inRange(img_hsv,np.array(lower,dtype = "uint8"),np.array(upper,dtype = "uint8"))
-		mask = mask_part_1 | mask_part_2
-	else:  
-		lower = (int((hue_center-hue_radius)/2),255*lower_sat,255*lower_val)
-		upper = (int((hue_center+hue_radius)/2),255*upper_sat,255*upper_val)
-		mask = cv2.inRange(img_hsv,np.array(lower,dtype = "uint8"),np.array(upper,dtype = "uint8"))
-	return mask
+	def getCoronaMask(self,hsv_img):
+		# Setting the kernel to be the max size of the ball ensures 
+		# that the inner saturated ball gets gellied when dilating
+		kernel = cv2.getStructuringElement(cv2.MORPH_ELLIPSE,(self.MAX_BALL_RAD*2+1,self.MAX_BALL_RAD*2+1))
+		mask = self.maskColor(hsv_img,self.hue,self.hue_range,self.u_sat,self.m_sat,self.m_bright,self.l_bright)
+		mask = cv2.dilate(mask, kernel, iterations=1)
+		mask = cv2.erode(mask, kernel, iterations=1)
+		return mask
 
-def maskRod(hsv_img):
-	#TODO: Tune "simplify", this is the amount of erosion/dilation on the color mask
-	SIMPLIFY = 2
-	# Run the color mask
-	mask = maskColor(hsv_img,ROD_HUE,ROD_RANGE,
-		ROD_UPPER_SATURATION,ROD_LOWER_SATURATION,ROD_UPPER_BRIGHTNESS,ROD_LOWER_BRIGHTNESS)
-	# Simplify shapes
-	kernel = cv2.getStructuringElement(cv2.MORPH_ELLIPSE,(SIMPLIFY,SIMPLIFY))
-	mask = cv2.erode(mask, kernel, iterations=1)
-	mask = cv2.dilate(mask, kernel, iterations=1)
-	return mask
+	def getMarkerMask(self,pupil_mask, corona_mask):
+		mask = np.minimum(pupil_mask,corona_mask)
+		mask = cv2.GaussianBlur(mask, (self.PUPIL_BLUR, self.PUPIL_BLUR), 0)
+		return mask
 
-def maskBall(hsv_img,hue,hue_range,upper_sat,lower_sat,upper_val,lower_val):
-	#TODO: Tune "simplify", this is the amount of erosion/dilation on the color mask
-	SIMPLIFY = 30
+	def getReadableMask(self,img):
+		hsv_img = self.prepareImage(img)
+		pupil_mask = self.getPupilMask(hsv_img)
+		corona_mask = self.getCoronaMask(hsv_img)
+		marker_mask = self.getMarkerMask(pupil_mask, corona_mask)
 
-	mask = maskColor(hsv_img,hue,hue_range,upper_sat,lower_sat,upper_val,lower_val)
-	kernel = cv2.getStructuringElement(cv2.MORPH_ELLIPSE,(SIMPLIFY,SIMPLIFY))
-	mask = cv2.dilate(mask, kernel, iterations=1)
-	mask = cv2.erode(mask, kernel, iterations=1)
-	return mask
+		# prevent mask colors from overlapping and turning white
+		pupil_mask[marker_mask > 0] = 0
+		corona_mask[marker_mask > 0] = 0
 
-def maskTopBall(hsv_img):
-	return maskBall(hsv_img,TOP_HUE,TOP_RANGE,
-		TOP_UPPER_SATURATION,TOP_LOWER_SATURATION,TOP_UPPER_BRIGHTNESS,TOP_LOWER_BRIGHTNESS)
+		merge = np.dstack((corona_mask,pupil_mask,marker_mask)) #R G B
+		return merge
 
-def maskBottomBall(hsv_img):
-	return maskBall(hsv_img,BOTTOM_HUE,BOTTOM_RANGE,
-		BOTTOM_UPPER_SATURATION,BOTTOM_LOWER_SATURATION,BOTTOM_UPPER_BRIGHTNESS,BOTTOM_LOWER_BRIGHTNESS)
+	def detect(self,img):
+		hsv_img = self.prepareImage(img)
+		pupil_mask = self.getPupilMask(hsv_img)
+		corona_mask = self.getCoronaMask(hsv_img)
+		marker_mask = self.getMarkerMask(pupil_mask, corona_mask)
 
-def findRodLines(hsv_img):
-	mask = maskRod(hsv_img)
-	# Find edges and lines
-	edges = cv2.Canny(mask,50,100,apertureSize = 3)
-	lines = cv2.HoughLines(edges,1,np.pi/180,100)
-	output = []
-	try:
-		for line in lines:
-			rho,theta = line[0]
-			end_points = lineEndPointsOnImage(rho, theta, (img.shape[0],img.shape[1]))
-			output.append(end_points)
-	except:
-		pass
-	return output
+		circles = cv2.HoughCircles(marker_mask, cv2.HOUGH_GRADIENT, self.CIRCULARITY_SENSITIVITY, 50,
+			param1=100,param2=30,minRadius=0,maxRadius=self.MAX_BALL_RAD)
+		if circles is not None:
+			if len(circles) == 1:
+				circles = np.round(circles[0, :]).astype("int")
+				return circles[0]
+		return None
 
-def findCircles(mask):
-	MAX_BALL_RAD = 35
-	CIRCULARITY_SENSITIVITY = 5 #1-5ish range
+	# def findCircle(hsv_img):
+	# 	mask = maskTopBall(hsv_img)
+	# 	circles = findCircles(mask)
+	# 	return circles
 
-	circles = cv2.HoughCircles(mask, cv2.HOUGH_GRADIENT, CIRCULARITY_SENSITIVITY, 50,
-		param1=100,param2=30,minRadius=0,maxRadius=MAX_BALL_RAD)
-	
-	if circles is not None:
-		circles = np.round(circles[0, :]).astype("int")
-	return circles
+class BallWand():
+	def __init__(self,marker_distance):
+		self.marker_distance = marker_distance
 
-def findTopCircle(hsv_img):
-	mask = maskTopBall(hsv_img)
-	circles = findCircles(mask)
-	return circles
+		self.topMarker = ActiveBallMarker(hue=345, hue_range=35, 
+			u_sat=0.2, m_sat=0.04, l_sat=0, u_bright=1, m_bright=0.96, l_bright=0.85)
+		self.bottomMarker = ActiveBallMarker(hue=120, hue_range=40, 
+			u_sat=0.2, m_sat=0.04, l_sat=0, u_bright=1, m_bright=0.96, l_bright=0.85)
 
-def findBottomCircle(hsv_img):
-	mask = maskBottomBall(hsv_img)
-	circles = findCircles(mask)
-	return circles
+	def detect(self,img):
+		top_keypoints = self.topMarker.detect(img)
+		bottom_keypoints = self.bottomMarker.detect(img)
+		if top_keypoints is None or bottom_keypoints is None:
+			return None
 
-def drawCircles(img,circles):
-	if circles is not None:
-		for (x, y, r) in circles:
-			cv2.circle(img, (x, y), r, (0, 255, 0), 6)
-			#cv2.rectangle(img, (x - 5, y - 5), (x + 5, y + 5), (0, 128, 255), -1)
+		keypoints = {'top':{'x':top_keypoints[0],'y':top_keypoints[1],'r':top_keypoints[2]},
+					 'bottom':{'x':bottom_keypoints[0],'y':bottom_keypoints[1],'r':bottom_keypoints[2]}}
+		return keypoints
 
-def drawLines(img,lines):
-	if lines is not None:
-		for line in lines:
-			cv2.line(img,line[0],line[1],(0,0,255),2)
+	def draw(self,img,key):
+		cv2.circle(img, (key['top']['x'],key['top']['y']), key['top']['r'], (0, 0, 255), 5)
+		cv2.circle(img, (key['bottom']['x'],key['bottom']['y']), key['bottom']['r'], (0, 255, 0), 5)
+		cv2.line(img,(key['top']['x'],key['top']['y']),(key['bottom']['x'],key['bottom']['y']), (255, 0, 0), 5)
+
