@@ -7,10 +7,10 @@ class Marker():
 	def __init__(self):
 		pass
 
-	def detectMarker(self,img):
+	def detect(self,img):
 		raise NotImplementedError
 
-	def getReadableMask(self,img):
+	def visualizeMask(self,img):
 		raise NotImplementedError
 	
 	# Hue (what colour), Saturation (white to colour) Value (dark to vibrant)
@@ -76,29 +76,19 @@ class ActiveBallMarker(Marker):
 		mask = cv2.erode(mask, kernel, iterations=1)
 		return mask
 
-	def getMarkerMask(self,pupil_mask, corona_mask):
-		mask = np.minimum(pupil_mask,corona_mask)
-		mask = cv2.GaussianBlur(mask, (self.PUPIL_BLUR, self.PUPIL_BLUR), 0)
-		return mask
-
-	def getReadableMask(self,img):
+	def visualizeMask(self,img):
 		hsv_img = self.prepareImage(img)
 		pupil_mask = self.getPupilMask(hsv_img)
 		corona_mask = self.getCoronaMask(hsv_img)
-		marker_mask = self.getMarkerMask(pupil_mask, corona_mask)
-
-		# prevent mask colors from overlapping and turning white
-		pupil_mask[marker_mask > 0] = 0
-		corona_mask[marker_mask > 0] = 0
-
-		merge = np.dstack((corona_mask,pupil_mask,marker_mask)) #R G B
-		return merge
+		has_mask = np.logical_or(pupil_mask > 0, corona_mask > 0)
+		img[has_mask] = np.dstack((corona_mask, np.zeros(pupil_mask.shape), pupil_mask))[has_mask]
 
 	def detect(self,img):
 		hsv_img = self.prepareImage(img)
 		pupil_mask = self.getPupilMask(hsv_img)
 		corona_mask = self.getCoronaMask(hsv_img)
-		marker_mask = self.getMarkerMask(pupil_mask, corona_mask)
+		marker_mask = np.minimum(pupil_mask,corona_mask)
+		marker_mask = cv2.GaussianBlur(marker_mask, (self.PUPIL_BLUR, self.PUPIL_BLUR), 0)
 
 		circles = cv2.HoughCircles(marker_mask, cv2.HOUGH_GRADIENT, self.CIRCULARITY_SENSITIVITY, 50,
 			param1=100,param2=30,minRadius=0,maxRadius=self.MAX_BALL_RAD)
@@ -108,15 +98,12 @@ class ActiveBallMarker(Marker):
 				return circles[0]
 		return None
 
-	# def findCircle(hsv_img):
-	# 	mask = maskTopBall(hsv_img)
-	# 	circles = findCircles(mask)
-	# 	return circles
 
 class BallWand():
-	def __init__(self,marker_distance):
-		self.marker_distance = marker_distance
+	def __init__(self):
 
+		#NOTE: where should these hard codes be located and how should they be referenced?
+		self.marker_distance = 0.4
 		self.topMarker = ActiveBallMarker(hue=345, hue_range=35, 
 			u_sat=0.2, m_sat=0.04, l_sat=0, u_bright=1, m_bright=0.96, l_bright=0.85)
 		self.bottomMarker = ActiveBallMarker(hue=120, hue_range=40, 
@@ -136,4 +123,10 @@ class BallWand():
 		cv2.circle(img, (key['top']['x'],key['top']['y']), key['top']['r'], (0, 0, 255), 5)
 		cv2.circle(img, (key['bottom']['x'],key['bottom']['y']), key['bottom']['r'], (0, 255, 0), 5)
 		cv2.line(img,(key['top']['x'],key['top']['y']),(key['bottom']['x'],key['bottom']['y']), (255, 0, 0), 5)
+
+	def visualizeMask(self,img):
+		self.topMarker.visualizeMask(img)
+		self.bottomMarker.visualizeMask(img)
+
+
 
