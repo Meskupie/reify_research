@@ -119,7 +119,7 @@ class BallWand():
 					 'bottom':{'x':bottom_keypoints[0],'y':bottom_keypoints[1],'r':bottom_keypoints[2]}}
 		return keypoints
 
-	def draw(self,img,key):
+	def drawResults(self,img,key):
 		cv2.circle(img, (key['top']['x'],key['top']['y']), key['top']['r'], (0, 0, 255), 5)
 		cv2.circle(img, (key['bottom']['x'],key['bottom']['y']), key['bottom']['r'], (0, 255, 0), 5)
 		cv2.line(img,(key['top']['x'],key['top']['y']),(key['bottom']['x'],key['bottom']['y']), (255, 0, 0), 5)
