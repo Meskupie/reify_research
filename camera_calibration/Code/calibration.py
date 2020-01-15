@@ -8,11 +8,12 @@ class IntrinsicCalibrator():
     def __init__(self,checkerShape=(9,6)):
         self.loaded = False
         self.resolution = None
+        self.cropBalance = 0
         
         # prepare object points, like (0,0,0), (1,0,0), (2,0,0) ....,(6,5,0)
         self.checkerShape = checkerShape
-        self.checkerPoints = np.zeros((self.checkerShape[0]*self.checkerShape[1],3), np.float32)
-        self.checkerPoints[:,:2] = np.mgrid[0:self.checkerShape[0],0:self.checkerShape[1]].T.reshape(-1,2)
+        self.checkerPoints = np.zeros((1,self.checkerShape[0]*self.checkerShape[1],3), np.float32)
+        self.checkerPoints[0,:,:2] = np.mgrid[0:self.checkerShape[0],0:self.checkerShape[1]].T.reshape(-1,2)
 
     def get_resolution(self,imgs):
         for img in imgs:
@@ -57,15 +58,18 @@ class IntrinsicCalibrator():
             total_error += error
         return total_error/len(objectKeypoints)
 
-    def save_camera_params(self,paramPath,cameraMatrix,newCameraMatrix,distortionParams,fov,calibrationError):
+    def save_camera_params(self,paramPath,cameraMatrix,newCameraMatrix,distortionCoefficients,):
         #TODO: Add resolution to file and add code to verify that the same resolution is being used as intended
         paramObject = {'cameraMatrix':cameraMatrix.tolist(),'newCameraMatrix':newCameraMatrix.tolist(),
-            'distortionParams':distortionParams.tolist(),'fov':fov,'calibrationError':calibrationError}
+            'distortionCoefficients':distortionCoefficients.tolist()}
         with open(paramPath, 'w') as file:
-            documents = yaml.dump(paramObject, file)
+            yaml.dump(paramObject, file)
 
     def load_camera_params(self,paramPath):
         #TODO: Do actual checking on this file to make sure that we loaded it correctly
+        cameraMatrix = np.zeros((3, 3))
+        newCameraMatrix = np.zeros((3, 3))
+        distortionCoefficients = np.zeros((4, 1))
         try:
             with open(paramPath) as file:
                 paramObject = yaml.full_load(file)
@@ -75,16 +79,19 @@ class IntrinsicCalibrator():
                     cameraMatrix = np.array(value)
                 elif key == 'newCameraMatrix':
                     newCameraMatrix = np.array(value)
-                elif key == 'distortionParams':
-                    distortionParams = np.array(value)
-                elif key == 'fov':
-                    self.fov = value
-                elif key == 'calibrationError':
-                    calibrationError = value
+                elif key == 'distortionCoefficients':
+                    distortionCoefficients = np.array(value)
                 else:
                     raise RuntimeError('Unknown key when reading camera YAML')
 
-            self.mapx, self.mapy = cv2.initUndistortRectifyMap(cameraMatrix,distortionParams,None,newCameraMatrix,self.resolution[:2][::-1],5)
+            self.mapx, self.mapy = cv2.fisheye.initUndistortRectifyMap(
+                cameraMatrix,
+                distortionCoefficients,
+                np.eye(3),
+                newCameraMatrix,
+                self.resolution[:2][::-1],
+                cv2.CV_16SC2
+            )
             self.loaded = True
             return True
 
@@ -94,46 +101,44 @@ class IntrinsicCalibrator():
 
     def calibrate_from_corners_list(self,paramPath,imageKeypoints,resolution):
         self.resolution = resolution
-        objectKeypoints = []
-        for i in imageKeypoints:
-            objectKeypoints.append(self.checkerPoints)
-        _, mtx, dist, rotationVectors, translationVectors = cv2.calibrateCamera(
-            objectKeypoints, imageKeypoints,self.resolution[:2][::-1],None,None)
-        # 4th arg determines how cropping occurs. 0 means scale in, 1 means scale out
-        newCameraMatrix, fov = cv2.getOptimalNewCameraMatrix(mtx,dist,self.resolution[:2][::-1],1,self.resolution[:2][::-1])
-        calibrationError = self.calculate_error(
-            imageKeypoints,objectKeypoints,mtx,dist,rotationVectors,translationVectors)
-        self.save_camera_params(paramPath,mtx,newCameraMatrix,dist,fov,calibrationError)
+
+        nSamples = len(imageKeypoints)
+        cameraMatrix = np.zeros((3, 3))
+        distortionCoefficients = np.zeros((4, 1))
+        rotationVectors = [np.zeros((1, 1, 3), dtype=np.float64) for i in range(nSamples)]
+        translationVectors = [np.zeros((1, 1, 3), dtype=np.float64) for i in range(nSamples)]
+        calibration_flags = cv2.fisheye.CALIB_RECOMPUTE_EXTRINSIC+cv2.fisheye.CALIB_FIX_SKEW #+cv2.fisheye.CALIB_CHECK_COND
+        rms, _, _, _, _ = cv2.fisheye.calibrate(
+            [self.checkerPoints]*nSamples,
+            imageKeypoints,
+            self.resolution[:2][::-1],
+            cameraMatrix,
+            distortionCoefficients,
+            rotationVectors,
+            translationVectors,
+            calibration_flags,
+            (cv2.TERM_CRITERIA_EPS+cv2.TERM_CRITERIA_MAX_ITER, 30, 1e-6)
+        )
+        # Note: see this link if calibration resolution and undistortion resolution are different
+        # https://gist.github.com/mesutpiskin/0412c44bae399adf1f48007f22bdd22d
+        newCameraMatrix = cv2.fisheye.estimateNewCameraMatrixForUndistortRectify(
+            cameraMatrix,
+            distortionCoefficients,
+            self.resolution[:2][::-1],
+            np.eye(3), balance=self.cropBalance
+        )
+        self.save_camera_params(paramPath,cameraMatrix,newCameraMatrix,distortionCoefficients)
         self.load_camera_params(paramPath)
 
-
-    def calibrate_from_image_list(self,paramPath,imgs):
-        #TODO add a return true or false piped from various steps
-        self.get_resolution(imgs)
-        objectKeypoints, imageKeypoints = self.checker_points_from_image_list(imgs)
-        _, mtx, dist, rotationVectors, translationVectors = cv2.calibrateCamera(
-            objectKeypoints, imageKeypoints,self.resolution[:2][::-1],None,None)
-        # 4th arg is the free scaleing param, 0 means scale in, 1 means scale out
-        newcameramtx, fov = cv2.getOptimalNewCameraMatrix(mtx,dist,self.resolution[:2][::-1],0)
-        calibrationError = self.calculate_error(imageKeypoints,objectKeypoints,mtx,dist,rotationVectors,translationVectors)
-        self.save_camera_params(paramPath,mtx,newcameramtx,dist,fov,calibrationError)
-        self.load_camera_params(paramPath)
-    
-    def calibrate_from_image_dir(self,paramPath,dirPath):
-        dirPath = os.path.join(dirPath,'checker_*.jpg')
-        imgPaths = glob.glob(dirPath)
-        imgs = []
-        for imgPath in imgPaths:
-            imgs.append(cv2.imread(imgPath))
-
-        self.calibrate_from_image_list(paramPath,imgs)
+    def calibrate_from_video(self,videoPath,paramPath):
+        pass
 
     def apply_intrinsic_transform(self,img):
         # TODO: need to look into the ordering of self.fov coming from 'cv2.getOptimalNewCameraMatrix'
         # undistort and crop the image
         print(img.shape)
         if self.loaded:
-            out = cv2.remap(img,self.mapx,self.mapy,cv2.INTER_LINEAR)
+            out = cv2.remap(img, self.mapx, self.mapy, interpolation=cv2.INTER_LINEAR, borderMode=cv2.BORDER_CONSTANT)
             # print(out.shape)
             # x,y,w,h = self.fov
             # out = out[y:y+h, x:x+w]
