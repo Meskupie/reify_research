@@ -103,6 +103,7 @@ class IntrinsicCalibrator():
         )
         return cameraMatrix,newCameraMatrix,distortionCoefficients
 
+<<<<<<< Updated upstream
     def calibrate_pinhole_from_corners_list(self,paramPath,imageKeypoints):
         self.resolution = resolution
         nSamples = len(imageKeypoints)
@@ -127,6 +128,22 @@ class IntrinsicCalibrator():
 
     def calibrate_from_image_dir(self,paramPath,dirPath,cameraType=1):
         dirPath = os.path.join(dirPath,'*.png')
+=======
+    def calibrate_from_image_list(self,paramPath,imgs):
+        #TODO add a return true or false piped from various steps
+        self.get_resolution(imgs)
+        objectKeypoints, imageKeypoints = self.checker_points_from_image_list(imgs)
+        _, mtx, dist, rotationVectors, translationVectors = cv2.calibrateCamera(
+            objectKeypoints, imageKeypoints,self.resolution[:2][::-1],None,None)
+        # 4th arg is the free scaleing param, 0 means scale in, 1 means scale out
+        newcameramtx, fov = cv2.getOptimalNewCameraMatrix(mtx,dist,self.resolution[:2][::-1],0)
+        calibrationError = self.calculate_error(imageKeypoints,objectKeypoints,mtx,dist,rotationVectors,translationVectors)
+        self.save_camera_params(paramPath,mtx,newcameramtx,dist,fov,calibrationError)
+        self.load_camera_params(paramPath)
+    
+    def calibrate_frgitom_image_dir(self,paramPath,dirPath):
+        dirPath = os.path.join(dirPath,'checker_*.jpg')
+>>>>>>> Stashed changes
         imgPaths = glob.glob(dirPath)
         assert len(imgPaths) > 3, "Must be more than 3 images for calibration"
         cornersList = []
