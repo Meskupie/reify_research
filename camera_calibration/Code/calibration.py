@@ -9,23 +9,7 @@ class IntrinsicCalibrator():
         self.loaded = False
         self.resolution = None
         self.cropBalance = 0
-        
-        # prepare object points, like (0,0,0), (1,0,0), (2,0,0) ....,(6,5,0)
         self.checkerShape = checkerShape
-        self.checkerPoints = np.zeros((1,self.checkerShape[0]*self.checkerShape[1],3), np.float32)
-        self.checkerPoints[0,:,:2] = np.mgrid[0:self.checkerShape[0],0:self.checkerShape[1]].T.reshape(-1,2)
-
-    def get_resolution(self,imgs):
-        for img in imgs:
-            if self.resolution is None:
-                self.resolution = img.shape
-            elif self.resolution == img.shape:
-                continue
-            else:
-                return False
-        #print(f'resolution {self.resolution}')
-        return True
-
 
     def find_corners(self,img,refine=True):
         gray = cv2.cvtColor(img,cv2.COLOR_BGR2GRAY)
@@ -61,7 +45,7 @@ class IntrinsicCalibrator():
     def save_camera_params(self,paramPath,cameraMatrix,newCameraMatrix,distortionCoefficients,):
         #TODO: Add resolution to file and add code to verify that the same resolution is being used as intended
         paramObject = {'cameraMatrix':cameraMatrix.tolist(),'newCameraMatrix':newCameraMatrix.tolist(),
-            'distortionCoefficients':distortionCoefficients.tolist()}
+            'distortionCoefficients':distortionCoefficients.tolist(), 'resolution':self.resolution}
         with open(paramPath, 'w') as file:
             yaml.dump(paramObject, file)
 
@@ -81,6 +65,8 @@ class IntrinsicCalibrator():
                     newCameraMatrix = np.array(value)
                 elif key == 'distortionCoefficients':
                     distortionCoefficients = np.array(value)
+                elif key == 'resolution':
+                    self.resolution = value
                 else:
                     raise RuntimeError('Unknown key when reading camera YAML')
 
@@ -99,17 +85,17 @@ class IntrinsicCalibrator():
             print('File reading is broken')
             return False
 
-    def calibrate_from_corners_list(self,paramPath,imageKeypoints,resolution):
-        self.resolution = resolution
-
+    def calibrate_fisheye_from_corners_list(self,paramPath,imageKeypoints):
         nSamples = len(imageKeypoints)
+        checkerPoints = np.zeros((1,self.checkerShape[0]*self.checkerShape[1],3), np.float32)
+        checkerPoints[0,:,:2] = np.mgrid[0:self.checkerShape[0],0:self.checkerShape[1]].T.reshape(-1,2)
         cameraMatrix = np.zeros((3, 3))
         distortionCoefficients = np.zeros((4, 1))
         rotationVectors = [np.zeros((1, 1, 3), dtype=np.float64) for i in range(nSamples)]
         translationVectors = [np.zeros((1, 1, 3), dtype=np.float64) for i in range(nSamples)]
         calibration_flags = cv2.fisheye.CALIB_RECOMPUTE_EXTRINSIC+cv2.fisheye.CALIB_FIX_SKEW #+cv2.fisheye.CALIB_CHECK_COND
         rms, _, _, _, _ = cv2.fisheye.calibrate(
-            [self.checkerPoints]*nSamples,
+            [checkerPoints]*nSamples,
             imageKeypoints,
             self.resolution[:2][::-1],
             cameraMatrix,
@@ -127,11 +113,127 @@ class IntrinsicCalibrator():
             self.resolution[:2][::-1],
             np.eye(3), balance=self.cropBalance
         )
+        return cameraMatrix,newCameraMatrix,distortionCoefficients
+
+    def calibrate_pinhole_from_corners_list(self,paramPath,imageKeypoints):
+        self.resolution = resolution
+        nSamples = len(imageKeypoints)
+        checkerPoints = np.zeros((self.checkerShape[0]*self.checkerShape[1],3), np.float32)
+        checkerPoints[:,:2] = np.mgrid[0:self.checkerShape[0],0:self.checkerShape[1]].T.reshape(-1,2)
+        _, cameraMatrix, distortionCoefficients, rotationVectors, translationVectors = cv2.calibrateCamera(
+            [checkerPoints]*nSamples,
+            imageKeypoints,
+            self.resolution[:2][::-1],
+            None,
+            None
+        )
+        # Note: see this link if calibration resolution and undistortion resolution are different
+        # https://gist.github.com/mesutpiskin/0412c44bae399adf1f48007f22bdd22d
+        newCameraMatrix , fov = cv2.getOptimalNewCameraMatrix(
+            cameraMatrix,
+            distortionCoefficients,
+            self.resolution[:2][::-1],
+            0
+        )
+        return cameraMatrix,newCameraMatrix,distortionCoefficients
+
+    def calibrate_from_image_dir(self,paramPath,dirPath,cameraType=1):
+        dirPath = os.path.join(dirPath,'checker_*.jpg')
+        imgPaths = glob.glob(dirPath)
+        cornersList = []
+        for imgPath in imgPaths:
+            frame = cv2.imread(imgPath)
+            if self.resolution is None:
+                self.resolution = frame.shape
+            elif self.resolution != frame.shape:
+                raise RuntimeError('Input images must have the same resolution')
+            corners = self.find_corners(frame)
+            cornersList.append(corners)
+
+        if cameraType == 0:
+            cameraMatrix,newCameraMatrix,distortionCoefficients = self.calibrate_pinhole_from_corners_list(paramPath,cornersList)
+        elif cameraType == 1:
+            cameraMatrix,newCameraMatrix,distortionCoefficients = self.calibrate_fisheye_from_image_list(paramPath,cornersList)
         self.save_camera_params(paramPath,cameraMatrix,newCameraMatrix,distortionCoefficients)
         self.load_camera_params(paramPath)
 
-    def calibrate_from_video(self,videoPath,paramPath):
-        pass
+    # def calibrate_from_video(self,videoPath,paramPath):
+    #     resolution = (720,1280,3)
+    #     fps = 25
+    #     distanceThresh = 0.05 #percentage of fov
+    #     speedThresh = 0.1 #percentage of fov / s
+    #     sampleSize = 300
+    #     fastForwardTime = 0.4
+    #
+    #     from tqdm.notebook import tqdm
+    #     import random
+    #
+    #     def captureImage(fname):
+    #         img = cv2.imread(fname)
+    #         if img.shape[:2] != resolution[:2]:
+    #             img = cv2.resize(img,resolution[:2][::-1])
+    #         return img
+    #
+    #     def average_distance(corners1,corners2):
+    #         corners1 = np.squeeze(corners1,axis=(1,)) #get rid of axis
+    #         corners2 = np.squeeze(corners2,axis=(1,)) #get rid of axis
+    #         diff = corners1-corners2
+    #         length = len(diff)
+    #         total = 0
+    #         for point in diff:
+    #             total = total + np.dot(point,point)
+    #         return total/length
+    #
+    #         cap = cv2.VideoCapture(data_path)
+    #         calibrator = IntrinsicCalibrator()
+    #         #corners_list = []
+    #
+    #         h = resolution[0]
+    #         w = resolution[1]
+    #         scale = np.sqrt(w*w+h*h)
+    #         movementDistances = []
+    #         filteredCorners = []
+    #         prevCorners = None
+    #
+    #         for i in tqdm(range(int(cap.get(cv2.CAP_PROP_FRAME_COUNT)))):
+    #         #for i in range(int(cap.get(cv2.CAP_PROP_FRAME_COUNT))):
+    #             frame_captured, frame = cap.read()
+    #             if frame_captured:
+    #                 corners_found, corners = calibrator.find_corners(frame)
+    #
+    #                 if corners_found:
+    #                     #corners_list.append(corners)
+    #                     if prevCorners is None:
+    #                         prevCorners = corners
+    #                     else:
+    #                         movementDistance = average_distance(prevCorners,corners)
+    #                         movementDistances.append(movementDistance)
+    #                         prevCorners = corners
+    #
+    #                         slowEnough = movementDistance < speedThresh*scale/fps
+    #                         if len(filteredCorners) == 0:
+    #                             farEnough = True
+    #                         else:
+    #                             farEnough = average_distance(filteredCorners[-1],corners)/scale > distanceThresh
+    #                         if slowEnough and farEnough:
+    #                             filteredCorners.append(corners)
+    #                             #cv2.drawChessboardCorners(frame, (9,6), corners,True)
+    #                             #drawImage(frame)
+    #                 else:
+    #                     # If we didnt detect anything this frame, lets skip a few
+    #         #             current_frame_count = cap.get(cv2.CAP_PROP_POS_FRAMES)
+    #         #             skip = int(fastForwardTime*fps)
+    #         #             i = i + skip
+    #         #             cap.set(cv2.CAP_PROP_POS_FRAMES,current_frame_count+skip)
+    #             else:
+    #                 break
+    #
+    #         if len(filteredCorners) > sampleSize:
+    #             print(f'Found {len(filteredCorners)} datapoints, sampleing {sampleSize}')
+    #             sampleCorners = random.sample(population=filteredCorners,k=sampleSize)
+    #         else:
+    #             print(f'Only {len(filteredCorners)} datapoints out of sample size of {sampleSize}')
+    #             sampleCorners = filteredCorners
 
     def apply_intrinsic_transform(self,img):
         # TODO: need to look into the ordering of self.fov coming from 'cv2.getOptimalNewCameraMatrix'
