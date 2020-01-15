@@ -3,6 +3,7 @@ import numpy as np
 import glob
 import os
 import yaml
+from tqdm import tqdm
 
 class IntrinsicCalibrator():
     def __init__(self,checkerShape=(9,6)):
@@ -11,6 +12,12 @@ class IntrinsicCalibrator():
         self.cropBalance = 0
         self.checkerShape = checkerShape
 
+    def is_loaded(self):
+        if self.loaded:
+            return True
+        else:
+            raise RuntimeError("Tried to undistort before loading calibration file")
+
     def find_corners(self,img,refine=True):
         gray = cv2.cvtColor(img,cv2.COLOR_BGR2GRAY)
         ret, corners = cv2.findChessboardCorners(gray, (self.checkerShape[0],self.checkerShape[1]),None)
@@ -18,29 +25,6 @@ class IntrinsicCalibrator():
             terminationCriteria = (cv2.TERM_CRITERIA_EPS + cv2.TERM_CRITERIA_MAX_ITER, 30, 0.001)
             corners = cv2.cornerSubPix(gray,corners,(11,11),(-1,-1),terminationCriteria)
         return ret, corners
-
-    def checker_points_from_image_list(self,imgs):
-        #TODO: Check if all the images are the same size, if they are not, calibration will fail
-        #TODO: check the number of images, need at least 3
-        objectPoints = [] # 3d point in real world space
-        imagePoints = [] # 2d points in image plane.
-        for img in imgs:
-            ret, corners = self.find_corners(img)
-            if ret:
-                objectPoints.append(self.checkerPoints)
-                imagePoints.append(corners)
-
-        #TODO: Check if enough images were correctly processed for calibration to suceed
-        #print('Processed {}of{} checkerboard images'.format(len(objectPoints),len(imgs)))
-        return objectPoints,imagePoints
-
-    def calculate_error (self,imageKeypoints,objectKeypoints,mtx,dist,rvecs,tvecs):
-        total_error = 0
-        for i in range(len(objectKeypoints)):
-            image_keypoints2, _ = cv2.projectPoints(objectKeypoints[i], rvecs[i], tvecs[i], mtx, dist)
-            error = cv2.norm(imageKeypoints[i],image_keypoints2, cv2.NORM_L2)/len(image_keypoints2)
-            total_error += error
-        return total_error/len(objectKeypoints)
 
     def save_camera_params(self,paramPath,cameraMatrix,newCameraMatrix,distortionCoefficients,):
         #TODO: Add resolution to file and add code to verify that the same resolution is being used as intended
@@ -85,10 +69,14 @@ class IntrinsicCalibrator():
             print('File reading is broken')
             return False
 
-    def calibrate_fisheye_from_corners_list(self,paramPath,imageKeypoints):
-        nSamples = len(imageKeypoints)
+    def calibrate_fisheye_from_corners_list(self,paramPath,imageKeypointsIn):
+        nSamples = len(imageKeypointsIn)
+        # A hack from this link was needed on the formatting of imageKeypoints and checkerPoints
+        # https://bitbucket.org/amitibo/pyfisheye/src/default/fisheye/core.py
         checkerPoints = np.zeros((1,self.checkerShape[0]*self.checkerShape[1],3), np.float32)
         checkerPoints[0,:,:2] = np.mgrid[0:self.checkerShape[0],0:self.checkerShape[1]].T.reshape(-1,2)
+        imageKeypoints = [corners.reshape(1, -1, 2) for corners in imageKeypointsIn]
+
         cameraMatrix = np.zeros((3, 3))
         distortionCoefficients = np.zeros((4, 1))
         rotationVectors = [np.zeros((1, 1, 3), dtype=np.float64) for i in range(nSamples)]
@@ -138,8 +126,9 @@ class IntrinsicCalibrator():
         return cameraMatrix,newCameraMatrix,distortionCoefficients
 
     def calibrate_from_image_dir(self,paramPath,dirPath,cameraType=1):
-        dirPath = os.path.join(dirPath,'checker_*.jpg')
+        dirPath = os.path.join(dirPath,'*.png')
         imgPaths = glob.glob(dirPath)
+        assert len(imgPaths) > 3, "Must be more than 3 images for calibration"
         cornersList = []
         for imgPath in imgPaths:
             frame = cv2.imread(imgPath)
@@ -147,15 +136,43 @@ class IntrinsicCalibrator():
                 self.resolution = frame.shape
             elif self.resolution != frame.shape:
                 raise RuntimeError('Input images must have the same resolution')
-            corners = self.find_corners(frame)
-            cornersList.append(corners)
+            ret, corners = self.find_corners(frame)
+            if ret:
+                cornersList.append(corners)
 
         if cameraType == 0:
             cameraMatrix,newCameraMatrix,distortionCoefficients = self.calibrate_pinhole_from_corners_list(paramPath,cornersList)
         elif cameraType == 1:
-            cameraMatrix,newCameraMatrix,distortionCoefficients = self.calibrate_fisheye_from_image_list(paramPath,cornersList)
+            cameraMatrix,newCameraMatrix,distortionCoefficients = self.calibrate_fisheye_from_corners_list(paramPath,cornersList)
         self.save_camera_params(paramPath,cameraMatrix,newCameraMatrix,distortionCoefficients)
         self.load_camera_params(paramPath)
+
+    def undistort_image(self,img):
+        self.is_loaded()
+        return cv2.remap(img, self.mapx, self.mapy, interpolation=cv2.INTER_LINEAR, borderMode=cv2.BORDER_CONSTANT)
+
+    def undistort_video(self,videoInPath,videoOutPath):
+        assert videoOutPath.split('.')[-1] == 'avi', 'Video output path must include the .avi extension'
+        self.is_loaded()
+        inputCapture = cv2.VideoCapture(videoInPath)
+        nFrames = int(inputCapture.get(cv2.CAP_PROP_FRAME_COUNT))
+        fps = inputCapture.get(cv2.CAP_PROP_FPS)
+        frameWidth = int(inputCapture.get(cv2.CAP_PROP_FRAME_WIDTH))
+        frameHeight = int(inputCapture.get(cv2.CAP_PROP_FRAME_HEIGHT))
+        outputCaputre = cv2.VideoWriter(videoOutPath,cv2.VideoWriter_fourcc('M','J','P','G'), fps, (frameWidth,frameHeight))
+        for i in tqdm(range(nFrames)):
+            frameCaptured, frame = inputCapture.read()
+            if frameCaptured:
+                out = self.undistort_image(frame)
+                outputCaputre.write(out)
+            else:
+                if i == 0:
+                    raise RuntimeError("Couldn't find input video")
+
+    def draw_checkerboard(self,img):
+        ret, corners = self.find_corners(img)
+        cv2.drawChessboardCorners(img, (self.checkerShape[0],self.checkerShape[1]), corners,True)
+
 
     # def calibrate_from_video(self,videoPath,paramPath):
     #     resolution = (720,1280,3)
@@ -235,28 +252,13 @@ class IntrinsicCalibrator():
     #             print(f'Only {len(filteredCorners)} datapoints out of sample size of {sampleSize}')
     #             sampleCorners = filteredCorners
 
-    def apply_intrinsic_transform(self,img):
-        # TODO: need to look into the ordering of self.fov coming from 'cv2.getOptimalNewCameraMatrix'
-        # undistort and crop the image
-        print(img.shape)
-        if self.loaded:
-            out = cv2.remap(img, self.mapx, self.mapy, interpolation=cv2.INTER_LINEAR, borderMode=cv2.BORDER_CONSTANT)
-            # print(out.shape)
-            # x,y,w,h = self.fov
-            # out = out[y:y+h, x:x+w]
-            # print(out.shape)
-            return out
-        else:
-            return None
-
-    def draw_checkerboard(self,img):
-        ret, corners = self.find_corners(img)
-        cv2.drawChessboardCorners(img, (self.checkerShape[0],self.checkerShape[1]), corners,True)
-
-
-
-
-
+    # def calculate_error (self,imageKeypoints,objectKeypoints,mtx,dist,rvecs,tvecs):
+    #     total_error = 0
+    #     for i in range(len(objectKeypoints)):
+    #         image_keypoints2, _ = cv2.projectPoints(objectKeypoints[i], rvecs[i], tvecs[i], mtx, dist)
+    #         error = cv2.norm(imageKeypoints[i],image_keypoints2, cv2.NORM_L2)/len(image_keypoints2)
+    #         total_error += error
+    #     return total_error/len(objectKeypoints)
 
 class ExtrinsicCalibrator():
     def __init__(self):
