@@ -1,5 +1,6 @@
 import numpy as np
 
+
 def polar2Cartesian(rho: float, theta_rad: float, rotate90: bool = False):
     """
     Converts line equation from polar to cartesian coordinates
@@ -32,6 +33,7 @@ def polar2Cartesian(rho: float, theta_rad: float, rotate90: bool = False):
         b = y - m * x
 
     return m, b
+
 
 def lineEndPointsOnImage(rho: float, theta: float, image_shape: tuple):
     """
@@ -70,6 +72,7 @@ def lineEndPointsOnImage(rho: float, theta: float, image_shape: tuple):
 
     return end_pts
 
+
 def solve4x(y: float, m: float, b: float):
     """
     From y = m * x + b
@@ -81,6 +84,7 @@ def solve4x(y: float, m: float, b: float):
         return b
     return (y - b) / m
 
+
 def solve4y(x: float, m: float, b: float):
     """
     y = m * x + b
@@ -88,6 +92,7 @@ def solve4y(x: float, m: float, b: float):
     if m is np.nan:
         return b
     return m * x + b
+
 
 def pointOnOmage(x: int, y: int, image_shape: tuple):
     """

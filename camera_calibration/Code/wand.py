@@ -3,83 +3,86 @@ import numpy as np
 
 from linalghelpers import lineEndPointsOnImage
 
-#The pink aura
+
+# The pink aura
 class ActiveBallMarker():
-    def __init__(self, hue, hue_range, u_sat, m_sat, l_sat, u_bright, m_bright, l_bright):
-        self.IMAGE_BLUR = 3
-        self.MAX_BALL_RAD = 20
-        self.CIRCULARITY_SENSITIVITY = 5 #1-5ish range
-        self.PUPIL_BLUR = 5 # must be odd
+    def __init__(self, hue, hueRange, upperSaturation=0.2, mediumSaturation=0.04, lowerSaturation=0, upperBrightness=1,
+                 mediumBrightness=0.96, lowerBrightness=0.85):
+        self.imageBlur = 3
+        self.maxBallRad = 20
+        self.circularitySensitivity = 5  # 1-5ish range
+        self.pupilBlur = 5  # must be odd
 
         self.hue = hue
-        self.hue_range = hue_range
-        self.u_sat = u_sat
-        self.m_sat = m_sat
-        self.l_sat = l_sat
-        self.u_bright = u_bright
-        self.m_bright = m_bright
-        self.l_bright = l_bright
+        self.hueRange = hueRange
+        self.upperSaturation = upperSaturation
+        self.mediumSaturation = mediumSaturation
+        self.lowerSaturation = lowerSaturation
+        self.upperBright = upperBrightness
+        self.mediumBrightness = mediumBrightness
+        self.lowerBrightness = lowerBrightness
 
-    def maskColor(self,img_hsv,hue_center,hue_radius,
-        upper_sat=1.0,lower_sat=0.3,upper_val=1.0,lower_val=0.3):
-        #TODO: hue_rad > 180 = bad, darkness bounds, whiteness bounds
-        # handle color rollaround
-        if hue_center+hue_radius > 360:
-            hue_center = hue_center-360
-        if hue_center-hue_radius < 0:
-            #above zero
-            lower = (0,255*lower_sat,255*lower_val)
-            upper = (int((hue_center+hue_radius)/2),255*upper_sat,255*upper_val)
-            mask_part_1 = cv2.inRange(img_hsv,np.array(lower,dtype = "uint8"),np.array(upper,dtype = "uint8"))
-            #below zero
-            lower = (int((360+hue_center-hue_radius)/2),255*lower_sat,255*lower_val)
-            upper = (179,255*upper_sat,255*upper_val)
-            mask_part_2 = cv2.inRange(img_hsv,np.array(lower,dtype = "uint8"),np.array(upper,dtype = "uint8"))
-            mask = mask_part_1 | mask_part_2
-        else:  
-            lower = (int((hue_center-hue_radius)/2),255*lower_sat,255*lower_val)
-            upper = (int((hue_center+hue_radius)/2),255*upper_sat,255*upper_val)
-            mask = cv2.inRange(img_hsv,np.array(lower,dtype = "uint8"),np.array(upper,dtype = "uint8"))
+    def mask_color(self, imgHsv, hueCenter, hueRadius,
+                   upperSaturation=1.0, lowerSaturation=0.3, upperValue=1.0, lowerValue=0.3):
+        # TODO: hue_rad > 360 = bad, darkness bounds, whiteness bounds
+        assert hueRadius >=0 and hueRadius <= 360, "hueRadius must be between 0 and 360"
+
+        if hueCenter + hueRadius > 360:
+            hueCenter = hueCenter - 360
+        if hueCenter - hueRadius < 0:
+            # above zero
+            lower = (0, 255 * lowerSaturation, 255 * lowerValue)
+            upper = (int((hueCenter + hueRadius) / 2), 255 * upperSaturation, 255 * upperValue)
+            maskPart1 = cv2.inRange(imgHsv, np.array(lower, dtype="uint8"), np.array(upper, dtype="uint8"))
+            # below zero
+            lower = (int((360 + hueCenter - hueRadius) / 2), 255 * lowerSaturation, 255 * lowerValue)
+            upper = (179, 255 * upperSaturation, 255 * upperValue)
+            maskPart2 = cv2.inRange(imgHsv, np.array(lower, dtype="uint8"), np.array(upper, dtype="uint8"))
+            mask = maskPart1 | maskPart2
+        else:
+            lower = (int((hueCenter - hueRadius) / 2), 255 * lowerSaturation, 255 * lowerValue)
+            upper = (int((hueCenter + hueRadius) / 2), 255 * upperSaturation, 255 * upperValue)
+            mask = cv2.inRange(imgHsv, np.array(lower, dtype="uint8"), np.array(upper, dtype="uint8"))
         return mask
 
-    def prepareImage(self,img):
-        blurred_img = cv2.GaussianBlur(img, (self.IMAGE_BLUR, self.IMAGE_BLUR), 0)
-        hsv_img = cv2.cvtColor(blurred_img,cv2.COLOR_BGR2HSV)
-        return hsv_img
+    def prepare_image(self, img):
+        blurredImg = cv2.GaussianBlur(img, (self.imageBlur, self.imageBlur), 0)
+        hsvImg = cv2.cvtColor(blurredImg, cv2.COLOR_BGR2HSV)
+        return hsvImg
 
-    def getPupilMask(self,hsv_img):
-        mask = self.maskColor(hsv_img,self.hue,self.hue_range,self.m_sat,self.l_sat,self.u_bright,self.m_bright)
-        kernel = cv2.getStructuringElement(cv2.MORPH_ELLIPSE,(self.PUPIL_BLUR,self.PUPIL_BLUR))
-        mask = cv2.dilate(mask, kernel, iterations=1)
-        mask = cv2.erode(mask, kernel, iterations=1)
+    def get_pupil_mask(self, hsvImg):
+        kernel = cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (self.pupilBlur, self.pupilBlur))
+        mask = self.mask_color(hsvImg, self.hue, self.hueRange, self.mediumSaturation, self.lowerSaturation,
+                               self.upperBright, self.mediumBrightness)
+        mask = cv2.morphologyEx(mask, cv.MORPH_OPEN, kernel)
         return mask
 
-    def getCoronaMask(self,hsv_img):
+    def get_corona_mask(self, hsv_img):
         # Setting the kernel to be the max size of the ball ensures 
-        # that the inner saturated ball gets gellied when dilating
-        kernel = cv2.getStructuringElement(cv2.MORPH_ELLIPSE,(self.MAX_BALL_RAD*2+1,self.MAX_BALL_RAD*2+1))
-        mask = self.maskColor(hsv_img,self.hue,self.hue_range,self.u_sat,self.m_sat,self.m_bright,self.l_bright)
-        mask = cv2.dilate(mask, kernel, iterations=1)
-        mask = cv2.erode(mask, kernel, iterations=1)
+        # that the inner saturated ball gets filled with mask when dilating
+        kernel = cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (self.maxBallRad * 2 + 1, self.maxBallRad * 2 + 1))
+        mask = self.mask_color(hsv_img, self.hue, self.hueRange, self.upperSaturation, self.mediumSaturation,
+                               self.mediumBrightness, self.lowerBrightness)
+        mask = cv2.morphologyEx(mask, cv.MORPH_OPEN, kernel)
         return mask
 
-    def visualizeMask(self,img):
-        hsv_img = self.prepareImage(img)
-        pupil_mask = self.getPupilMask(hsv_img)
-        corona_mask = self.getCoronaMask(hsv_img)
-        has_mask = np.logical_or(pupil_mask > 0, corona_mask > 0)
+    def visualize_mask(self, img):
+        hsvImg = self.prepare_image(img)
+        pupilMask = self.get_pupil_mask(hsvImg)
+        coronaMask = self.get_corona_mask(hsvImg)
+        hasMask = np.logical_or(pupilMask > 0, coronaMask > 0)
         # Add mask layer to image
-        img[has_mask] = np.dstack((corona_mask, np.zeros(pupil_mask.shape), pupil_mask))[has_mask]
+        img[hasMask] = np.dstack((coronaMask, np.zeros(pupilMask.shape), pupilMask))[hasMask]
 
-    def detect(self,img):
-        hsv_img = self.prepareImage(img)
-        pupil_mask = self.getPupilMask(hsv_img)
-        corona_mask = self.getCoronaMask(hsv_img)
-        marker_mask = np.minimum(pupil_mask,corona_mask)
-        marker_mask = cv2.GaussianBlur(marker_mask, (self.PUPIL_BLUR, self.PUPIL_BLUR), 0)
+    def detect(self, img):
+        hsvImg = self.prepare_image(img)
+        pupilMask = self.get_pupil_mask(hsvImg)
+        coronaMask = self.get_corona_mask(hsvImg)
+        markerMask = np.minimum(pupilMask, coronaMask)
+        markerMask = cv2.GaussianBlur(markerMask, (self.pupilBlur, self.pupilBlur), 0)
 
-        circles = cv2.HoughCircles(marker_mask, cv2.HOUGH_GRADIENT, self.CIRCULARITY_SENSITIVITY, 50,
-            param1=100,param2=30,minRadius=0,maxRadius=self.MAX_BALL_RAD)
+        circles = cv2.HoughCircles(markerMask, cv2.HOUGH_GRADIENT, self.circularitySensitivity, 50,
+                                   param1=100, param2=30, minRadius=0, maxRadius=self.maxBallRad)
         if circles is not None:
             if len(circles) == 1:
                 circles = np.round(circles[0, :]).astype("int")
@@ -89,32 +92,26 @@ class ActiveBallMarker():
 
 class BallWand():
     def __init__(self):
+        # NOTE: where should these "hard codes" be located and how should they be referenced?
+        self.markerDistance = 0.4
+        self.topMarker = ActiveBallMarker(hue=345, hueRange=35)
+        self.bottomMarker = ActiveBallMarker(hue=120, hueRange=40)
 
-        #NOTE: where should these "hard codes" be located and how should they be referenced?
-        self.marker_distance = 0.4
-        self.topMarker = ActiveBallMarker(hue=345, hue_range=35, 
-            u_sat=0.2, m_sat=0.04, l_sat=0, u_bright=1, m_bright=0.96, l_bright=0.85)
-        self.bottomMarker = ActiveBallMarker(hue=120, hue_range=40, 
-            u_sat=0.2, m_sat=0.04, l_sat=0, u_bright=1, m_bright=0.96, l_bright=0.85)
-
-    def detect(self,img):
+    def detect(self, img):
         top_keypoints = self.topMarker.detect(img)
         bottom_keypoints = self.bottomMarker.detect(img)
         if top_keypoints is None or bottom_keypoints is None:
             return None
 
-        keypoints = {'top':{'x':top_keypoints[0],'y':top_keypoints[1],'r':top_keypoints[2]},
-                     'bottom':{'x':bottom_keypoints[0],'y':bottom_keypoints[1],'r':bottom_keypoints[2]}}
+        keypoints = {'top': {'x': top_keypoints[0], 'y': top_keypoints[1], 'r': top_keypoints[2]},
+                     'bottom': {'x': bottom_keypoints[0], 'y': bottom_keypoints[1], 'r': bottom_keypoints[2]}}
         return keypoints
 
-    def drawResults(self,img,key):
-        cv2.circle(img, (key['top']['x'],key['top']['y']), key['top']['r'], (0, 0, 255), 5)
-        cv2.circle(img, (key['bottom']['x'],key['bottom']['y']), key['bottom']['r'], (0, 255, 0), 5)
-        cv2.line(img,(key['top']['x'],key['top']['y']),(key['bottom']['x'],key['bottom']['y']), (255, 0, 0), 5)
+    def draw_results(self, img, key):
+        cv2.circle(img, (key['top']['x'], key['top']['y']), key['top']['r'], (0, 0, 255), 5)
+        cv2.circle(img, (key['bottom']['x'], key['bottom']['y']), key['bottom']['r'], (0, 255, 0), 5)
+        cv2.line(img, (key['top']['x'], key['top']['y']), (key['bottom']['x'], key['bottom']['y']), (255, 0, 0), 5)
 
-    def visualizeMask(self,img):
-        self.topMarker.visualizeMask(img)
-        self.bottomMarker.visualizeMask(img)
-
-
-
+    def visualize_mask(self, img):
+        self.topMarker.visualize_mask(img)
+        self.bottomMarker.visualize_mask(img)
