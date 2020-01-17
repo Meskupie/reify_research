@@ -6,19 +6,19 @@ from linalghelpers import lineEndPointsOnImage
 
 # The pink aura
 class ActiveBallMarker():
-    def __init__(self, hue, hueRange, upperSaturation=0.2, mediumSaturation=0.04, lowerSaturation=0, upperBrightness=1,
-                 mediumBrightness=0.96, lowerBrightness=0.85):
+    def __init__(self, hue, hueRange, upperSaturation=0.5, mediumSaturation=0.1, mediumBrightness=0.94, lowerBrightness=0.8):
+        self.lowerSaturation = 0
+        self.upperBrightness = 1
+
         self.imageBlur = 3
-        self.maxBallRad = 20
-        self.circularitySensitivity = 5  # 1-5ish range
-        self.pupilBlur = 5  # must be odd
+        self.maxBallDiameter = 0.02 # Percentage of screen size (0.02 = 30/(sqrt(1280^2+720^2)))
+        self.circularitySensitivity = 2  # 1-5ish range
+        self.pupilBlur = 9 # must be odd
 
         self.hue = hue
         self.hueRange = hueRange
         self.upperSaturation = upperSaturation
         self.mediumSaturation = mediumSaturation
-        self.lowerSaturation = lowerSaturation
-        self.upperBright = upperBrightness
         self.mediumBrightness = mediumBrightness
         self.lowerBrightness = lowerBrightness
 
@@ -52,27 +52,36 @@ class ActiveBallMarker():
 
     def get_pupil_mask(self, hsvImg):
         kernel = cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (self.pupilBlur, self.pupilBlur))
-        mask = self.mask_color(hsvImg, self.hue, self.hueRange, self.mediumSaturation, self.lowerSaturation,
-                               self.upperBright, self.mediumBrightness)
-        mask = cv2.morphologyEx(mask, cv.MORPH_OPEN, kernel)
+        mask = self.mask_color(hsvImg, 180, 180, self.mediumSaturation, self.lowerSaturation,
+                               self.upperBrightness, self.mediumBrightness)
+        mask = cv2.morphologyEx(mask, cv2.MORPH_OPEN, kernel)
         return mask
 
-    def get_corona_mask(self, hsv_img):
+    def get_corona_mask(self, hsvImg):
+        h, w = hsvImg.shape[:2]
+        pixelBallDiameter = int(self.maxBallDiameter*np.sqrt(w*w+h*h))
+        # Make sure it is odd
+        if pixelBallDiameter%2 == 0:
+            pixelBallDiameter += 1
+
         # Setting the kernel to be the max size of the ball ensures 
         # that the inner saturated ball gets filled with mask when dilating
-        kernel = cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (self.maxBallRad * 2 + 1, self.maxBallRad * 2 + 1))
-        mask = self.mask_color(hsv_img, self.hue, self.hueRange, self.upperSaturation, self.mediumSaturation,
+        kernel = cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (pixelBallDiameter, pixelBallDiameter))
+        mask = self.mask_color(hsvImg, self.hue, self.hueRange, self.upperSaturation, self.mediumSaturation,
                                self.mediumBrightness, self.lowerBrightness)
-        mask = cv2.morphologyEx(mask, cv.MORPH_OPEN, kernel)
+        mask = cv2.morphologyEx(mask, cv2.MORPH_CLOSE, kernel)
         return mask
 
-    def visualize_mask(self, img):
+    def visualize_mask(self, img, outImg):
         hsvImg = self.prepare_image(img)
         pupilMask = self.get_pupil_mask(hsvImg)
         coronaMask = self.get_corona_mask(hsvImg)
         hasMask = np.logical_or(pupilMask > 0, coronaMask > 0)
         # Add mask layer to image
-        img[hasMask] = np.dstack((coronaMask, np.zeros(pupilMask.shape), pupilMask))[hasMask]
+        #img[:] = np.dstack(( np.zeros(pupilMask.shape), np.zeros(pupilMask.shape), coronaMask))
+        out = outImg.copy()
+        out[hasMask] = np.dstack((coronaMask, np.zeros(pupilMask.shape), pupilMask))[hasMask]
+        return out
 
     def detect(self, img):
         hsvImg = self.prepare_image(img)
@@ -82,36 +91,41 @@ class ActiveBallMarker():
         markerMask = cv2.GaussianBlur(markerMask, (self.pupilBlur, self.pupilBlur), 0)
 
         circles = cv2.HoughCircles(markerMask, cv2.HOUGH_GRADIENT, self.circularitySensitivity, 50,
-                                   param1=100, param2=30, minRadius=0, maxRadius=self.maxBallRad)
+                                   param1=100, param2=30, minRadius=0, maxRadius=int(self.maxBallDiameter/2))
         if circles is not None:
             if len(circles) == 1:
                 circles = np.round(circles[0, :]).astype("int")
                 return circles[0]
+            # elif len(circles) > 1:
+            #     print('hmmm')
         return None
 
 
 class BallWand():
     def __init__(self):
-        # NOTE: where should these "hard codes" be located and how should they be referenced?
         self.markerDistance = 0.4
-        self.topMarker = ActiveBallMarker(hue=345, hueRange=35)
+        self.topMarker = ActiveBallMarker(hue=345, hueRange=40)
         self.bottomMarker = ActiveBallMarker(hue=120, hueRange=40)
 
     def detect(self, img):
-        top_keypoints = self.topMarker.detect(img)
-        bottom_keypoints = self.bottomMarker.detect(img)
-        if top_keypoints is None or bottom_keypoints is None:
+        topKeypoints = self.topMarker.detect(img)
+        bottomKeypoints = self.bottomMarker.detect(img)
+        if topKeypoints is None or bottomKeypoints is None:
             return None
 
-        keypoints = {'top': {'x': top_keypoints[0], 'y': top_keypoints[1], 'r': top_keypoints[2]},
-                     'bottom': {'x': bottom_keypoints[0], 'y': bottom_keypoints[1], 'r': bottom_keypoints[2]}}
+        keypoints = {'top': {'x': topKeypoints[0], 'y': topKeypoints[1], 'r': topKeypoints[2]},
+                     'bottom': {'x': bottomKeypoints[0], 'y': bottomKeypoints[1], 'r': bottomKeypoints[2]}}
         return keypoints
 
-    def draw_results(self, img, key):
-        cv2.circle(img, (key['top']['x'], key['top']['y']), key['top']['r'], (0, 0, 255), 5)
-        cv2.circle(img, (key['bottom']['x'], key['bottom']['y']), key['bottom']['r'], (0, 255, 0), 5)
-        cv2.line(img, (key['top']['x'], key['top']['y']), (key['bottom']['x'], key['bottom']['y']), (255, 0, 0), 5)
+    def draw(self, img, key):
+        out = img.copy()
+        cv2.circle(out, (key['top']['x'], key['top']['y']), key['top']['r'], (0, 0, 255), 5)
+        cv2.circle(out, (key['bottom']['x'], key['bottom']['y']), key['bottom']['r'], (0, 255, 0), 5)
+        cv2.line(out, (key['top']['x'], key['top']['y']), (key['bottom']['x'], key['bottom']['y']), (255, 0, 0), 5)
+        return out
 
     def visualize_mask(self, img):
-        self.topMarker.visualize_mask(img)
-        self.bottomMarker.visualize_mask(img)
+        raise RuntimeError("this method is broken, call on topMarker or bottomMarker instead")
+        out = self.topMarker.visualize_mask(img,img)
+        out = self.bottomMarker.visualize_mask(img,out)
+        return out
