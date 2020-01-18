@@ -6,14 +6,15 @@ from linalghelpers import lineEndPointsOnImage
 
 # The pink aura
 class ActiveBallMarker():
-    def __init__(self, hue, hueRange, upperSaturation=0.5, mediumSaturation=0.1, mediumBrightness=0.94, lowerBrightness=0.8):
+    def __init__(self, hue, hueRange, upperSaturation=0.5, mediumSaturation=0.1, mediumBrightness=0.94,
+                 lowerBrightness=0.8):
         self.lowerSaturation = 0
         self.upperBrightness = 1
 
         self.imageBlur = 3
-        self.maxBallDiameter = 0.02 # Percentage of screen size (0.02 = 30/(sqrt(1280^2+720^2)))
-        self.circularitySensitivity = 2  # 1-5ish range
-        self.pupilBlur = 9 # must be odd
+        self.maxBallDiameter = 0.02  # Percentage of screen size (0.02 = 30/(sqrt(1280^2+720^2)))
+        self.circularitySensitivity = 5  # 1-5ish range
+        self.pupilBlur = 9  # must be odd
 
         self.hue = hue
         self.hueRange = hueRange
@@ -25,7 +26,7 @@ class ActiveBallMarker():
     def mask_color(self, imgHsv, hueCenter, hueRadius,
                    upperSaturation=1.0, lowerSaturation=0.3, upperValue=1.0, lowerValue=0.3):
         # TODO: hue_rad > 360 = bad, darkness bounds, whiteness bounds
-        assert hueRadius >=0 and hueRadius <= 360, "hueRadius must be between 0 and 360"
+        assert hueRadius >= 0 and hueRadius <= 360, "hueRadius must be between 0 and 360"
 
         if hueCenter + hueRadius > 360:
             hueCenter = hueCenter - 360
@@ -59,9 +60,9 @@ class ActiveBallMarker():
 
     def get_corona_mask(self, hsvImg):
         h, w = hsvImg.shape[:2]
-        pixelBallDiameter = int(self.maxBallDiameter*np.sqrt(w*w+h*h))
+        pixelBallDiameter = int(self.maxBallDiameter * np.sqrt(w * w + h * h))
         # Make sure it is odd
-        if pixelBallDiameter%2 == 0:
+        if pixelBallDiameter % 2 == 0:
             pixelBallDiameter += 1
 
         # Setting the kernel to be the max size of the ball ensures 
@@ -78,10 +79,34 @@ class ActiveBallMarker():
         coronaMask = self.get_corona_mask(hsvImg)
         hasMask = np.logical_or(pupilMask > 0, coronaMask > 0)
         # Add mask layer to image
-        #img[:] = np.dstack(( np.zeros(pupilMask.shape), np.zeros(pupilMask.shape), coronaMask))
+        # img[:] = np.dstack(( np.zeros(pupilMask.shape), np.zeros(pupilMask.shape), coronaMask))
         out = outImg.copy()
         out[hasMask] = np.dstack((coronaMask, np.zeros(pupilMask.shape), pupilMask))[hasMask]
         return out
+
+    def detect_pupil(self, img):
+        hsvImg = self.prepare_image(img)
+        pupilMask = self.get_pupil_mask(hsvImg)
+        pupilMask = cv2.GaussianBlur(pupilMask, (self.pupilBlur, self.pupilBlur), 0)
+        pupilMoments = cv2.moments(pupilMask)
+        if pupilMoments["m00"] == 0:
+            return None
+        cX = int(pupilMoments["m10"] / pupilMoments["m00"])
+        cY = int(pupilMoments["m01"] / pupilMoments["m00"])
+        return {'x': cX, 'y': cY}
+
+    # def detect_pupil(self, img):
+    #     hsvImg = self.prepare_image(img)
+    #     pupilMask = self.get_pupil_mask(hsvImg)
+    #     pupilMask = cv2.GaussianBlur(pupilMask, (self.pupilBlur, self.pupilBlur), 0)
+    #
+    #     circles = cv2.HoughCircles(pupilMask, cv2.HOUGH_GRADIENT, self.circularitySensitivity, 50,
+    #                                param1=100, param2=30, minRadius=0, maxRadius=int(self.maxBallDiameter / 2))
+    #     if circles is not None:
+    #         if len(circles) == 1:
+    #             circles = circles[0, :][0, :]
+    #             return {'x': circles[0], 'y': circles[1], 'r': circles[2]}
+    #     return None
 
     def detect(self, img):
         hsvImg = self.prepare_image(img)
@@ -91,13 +116,12 @@ class ActiveBallMarker():
         markerMask = cv2.GaussianBlur(markerMask, (self.pupilBlur, self.pupilBlur), 0)
 
         circles = cv2.HoughCircles(markerMask, cv2.HOUGH_GRADIENT, self.circularitySensitivity, 50,
-                                   param1=100, param2=30, minRadius=0, maxRadius=int(self.maxBallDiameter/2))
+                                   param1=100, param2=30, minRadius=0, maxRadius=int(self.maxBallDiameter / 2))
         if circles is not None:
             if len(circles) == 1:
-                circles = np.round(circles[0, :]).astype("int")
-                return circles[0]
-            # elif len(circles) > 1:
-            #     print('hmmm')
+                circles = circles[0, :][0, :]
+                out = {'x': circles[0], 'y': circles[1], 'r': circles[2]}
+                return out
         return None
 
 
@@ -113,8 +137,7 @@ class BallWand():
         if topKeypoints is None or bottomKeypoints is None:
             return None
 
-        keypoints = {'top': {'x': topKeypoints[0], 'y': topKeypoints[1], 'r': topKeypoints[2]},
-                     'bottom': {'x': bottomKeypoints[0], 'y': bottomKeypoints[1], 'r': bottomKeypoints[2]}}
+        keypoints = {'top': topKeypoints, 'bottom': bottomKeypoints}
         return keypoints
 
     def draw(self, img, key):
@@ -126,6 +149,6 @@ class BallWand():
 
     def visualize_mask(self, img):
         raise RuntimeError("this method is broken, call on topMarker or bottomMarker instead")
-        out = self.topMarker.visualize_mask(img,img)
-        out = self.bottomMarker.visualize_mask(img,out)
+        out = self.topMarker.visualize_mask(img, img)
+        out = self.bottomMarker.visualize_mask(img, out)
         return out
