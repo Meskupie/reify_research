@@ -123,7 +123,6 @@ class IntrinsicCalibrator():
         )
         return cameraMatrix, newCameraMatrix, distortionCoefficients
 
-
     def calibrate_from_images(self, paramPath, imgPaths, cameraType=1):
         assert len(imgPaths) > 3, "Must be more than 3 images for calibration"
         cornersList = []
@@ -143,16 +142,13 @@ class IntrinsicCalibrator():
             cameraMatrix, newCameraMatrix, distortionCoefficients = self.calibrate_fisheye_from_corners(cornersList)
         self.save_params(paramPath, cameraMatrix, newCameraMatrix, distortionCoefficients)
 
-
     def undistort_image(self, img):
         self.is_loaded()
         return cv2.remap(img, self.mapx, self.mapy, interpolation=cv2.INTER_LINEAR, borderMode=cv2.BORDER_CONSTANT)
 
-
     def draw_checkerboard(self, img):
         ret, corners = self.find_corners(img)
         cv2.drawChessboardCorners(img, (self.checkerShape[0], self.checkerShape[1]), corners, True)
-
 
     # def calibrate_from_video(self,videoPath,paramPath):
     #     resolution = (720,1280,3)
@@ -239,6 +235,7 @@ class IntrinsicCalibrator():
     #         error = cv2.norm(imageKeypoints[i],image_keypoints2, cv2.NORM_L2)/len(image_keypoints2)
     #         total_error += error
     #     return total_error/len(objectKeypoints)
+
 
 class ExtrinsicCalibrator():
     def __init__(self):
