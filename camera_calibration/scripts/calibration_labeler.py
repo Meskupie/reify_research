@@ -99,11 +99,6 @@ class Labeler():
                 distance = frameList[::-1][np.argmax((frameIndex - frameList[::-1]) > 0)] - frameIndex
         return distance
 
-    def get_previous_label_distance(self):
-        global frameIndex
-        frameList = np.array([int(key) for key in list(self.labelDict.keys())])
-        frameList.sort()
-        return frameList[::-1][np.argmax((frameIndex - frameList[::-1]) > 0)]
 
     def get_image_with_header(self, image):
         global frameIndex, videoIndex
