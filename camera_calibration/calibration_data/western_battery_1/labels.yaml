@@ -1,0 +1,998 @@
+'1000':
+- class: bottom
+  location:
+  - 674.9
+  - 148.05
+  view: 0
+- class: top
+  location:
+  - 721.25
+  - 124.55
+  view: 0
+- class: top
+  location:
+  - 652.6
+  - 386.4
+  view: 2
+- class: bottom
+  location:
+  - 779.45
+  - 438.35
+  view: 2
+- class: top
+  location:
+  - 955
+  - 112
+  view: 1
+- class: bottom
+  location:
+  - 916.0
+  - 138.7
+  view: 1
+- class: top
+  location:
+  - 298
+  - 194
+  view: 3
+- class: bottom
+  location:
+  - 301
+  - 279
+  view: 3
+'1050':
+- class: bottom
+  location:
+  - 620.05
+  - 144.05
+  view: 0
+- class: top
+  location:
+  - 591.45
+  - 114.3
+  view: 0
+- class: top
+  location:
+  - 945.3
+  - 286.95
+  view: 2
+- class: bottom
+  location:
+  - 953.65
+  - 423.2
+  view: 2
+- class: top
+  location:
+  - 841.2
+  - 88.5
+  view: 1
+- class: bottom
+  location:
+  - 881.35
+  - 129.95
+  view: 1
+- class: top
+  location:
+  - 320
+  - 296
+  view: 3
+- class: bottom
+  location:
+  - 265
+  - 364
+  view: 3
+'1072':
+- class: top
+  location:
+  - 916.9
+  - 483.9
+  view: 2
+- class: bottom
+  location:
+  - 951
+  - 548
+  view: 2
+- class: top
+  location:
+  - 109.6
+  - 234.65
+  view: 3
+- class: bottom
+  location:
+  - 171.55
+  - 340.55
+  view: 3
+'1104':
+- class: top
+  location:
+  - 824.55
+  - 64.65
+  view: 0
+- class: bottom
+  location:
+  - 780.55
+  - 109.0
+  view: 0
+- class: top
+  location:
+  - 303.85
+  - 231.1
+  view: 2
+- class: bottom
+  location:
+  - 458.65
+  - 356.75
+  view: 2
+- class: top
+  location:
+  - 1051.35
+  - 36.6
+  view: 1
+- class: bottom
+  location:
+  - 1009.45
+  - 99.65
+  view: 1
+- class: top
+  location:
+  - 313
+  - 49
+  view: 3
+- class: bottom
+  location:
+  - 312
+  - 131
+  view: 3
+'1212':
+- class: top
+  location:
+  - 740.85
+  - 178.6
+  view: 0
+- class: bottom
+  location:
+  - 672.65
+  - 324.05
+  view: 0
+- class: top
+  location:
+  - 422.75
+  - 75.3
+  view: 2
+- class: bottom
+  location:
+  - 456.75
+  - 131.45
+  view: 2
+- class: top
+  location:
+  - 392
+  - 126
+  view: 1
+- class: bottom
+  location:
+  - 402.3
+  - 221.65
+  view: 1
+'138':
+- class: top
+  location:
+  - 1097.45
+  - 73.25
+  view: 0
+- class: bottom
+  location:
+  - 1012.55
+  - 234.0
+  view: 0
+- class: top
+  location:
+  - 262
+  - 45
+  view: 2
+- class: bottom
+  location:
+  - 306.35
+  - 120.4
+  view: 2
+- class: bottom
+  location:
+  - 509
+  - 206
+  view: 1
+- class: top
+  location:
+  - 498.9
+  - 56.5
+  view: 1
+'178':
+- class: top
+  location:
+  - 55.55
+  - 65.65
+  view: 2
+- class: bottom
+  location:
+  - 147.05
+  - 138.75
+  view: 2
+- class: top
+  location:
+  - 811.7
+  - 52.55
+  view: 1
+- class: bottom
+  location:
+  - 713.85
+  - 241.3
+  view: 1
+'216':
+- class: bottom
+  location:
+  - 1070.75
+  - 439.35
+  view: 0
+- class: top
+  location:
+  - 1156.55
+  - 366.7
+  view: 0
+- class: top
+  location:
+  - 153.3
+  - 295.4
+  view: 2
+- class: bottom
+  location:
+  - 239.05
+  - 315.3
+  view: 2
+- class: top
+  location:
+  - 846.7
+  - 481.7
+  view: 1
+- class: bottom
+  location:
+  - 746.15
+  - 508.1
+  view: 1
+- class: top
+  location:
+  - 611
+  - 100
+  view: 3
+- class: bottom
+  location:
+  - 644
+  - 136
+  view: 3
+'249':
+- class: top
+  location:
+  - 828.75
+  - 279.65
+  view: 0
+- class: bottom
+  location:
+  - 835.8
+  - 352.85
+  view: 0
+- class: top
+  location:
+  - 800.15
+  - 292.7
+  view: 1
+- class: bottom
+  location:
+  - 742.95
+  - 359.8
+  view: 1
+- class: top
+  location:
+  - 595
+  - 165
+  view: 3
+- class: bottom
+  location:
+  - 638
+  - 183
+  view: 3
+'295':
+- class: top
+  location:
+  - 501.9
+  - 397.95
+  view: 0
+- class: bottom
+  location:
+  - 586.6
+  - 441.55
+  view: 0
+- class: top
+  location:
+  - 565.3
+  - 201.7
+  view: 2
+- class: bottom
+  location:
+  - 537.4
+  - 249.75
+  view: 2
+- class: top
+  location:
+  - 469
+  - 273
+  view: 1
+- class: bottom
+  location:
+  - 516
+  - 328
+  view: 1
+- class: top
+  location:
+  - 884
+  - 182
+  view: 3
+- class: bottom
+  location:
+  - 825
+  - 212
+  view: 3
+'3':
+- class: top
+  location:
+  - 694.4
+  - 226.3
+  view: 0
+- class: top
+  location:
+  - 482.7
+  - 163.45
+  view: 2
+- class: bottom
+  location:
+  - 500.0
+  - 229.6
+  view: 2
+- class: top
+  location:
+  - 593.55
+  - 187.55
+  view: 1
+- class: bottom
+  location:
+  - 601
+  - 266
+  view: 1
+- class: top
+  location:
+  - 744.25
+  - 90.75
+  view: 3
+- class: bottom
+  location:
+  - 744.25
+  - 160.8
+  view: 3
+- class: bottom
+  location:
+  - 679
+  - 317
+  view: 0
+'349':
+- class: bottom
+  location:
+  - 524.4
+  - 229.55
+  view: 0
+- class: top
+  location:
+  - 592.4
+  - 171.25
+  view: 0
+- class: top
+  location:
+  - 582.9
+  - 146.05
+  view: 2
+- class: bottom
+  location:
+  - 625.3
+  - 176.5
+  view: 2
+- class: top
+  location:
+  - 618
+  - 136
+  view: 1
+- class: bottom
+  location:
+  - 582
+  - 174
+  view: 1
+- class: top
+  location:
+  - 750
+  - 102
+  view: 3
+- class: bottom
+  location:
+  - 811
+  - 162
+  view: 3
+'419':
+- class: top
+  location:
+  - 777.45
+  - 13.9
+  view: 0
+- class: bottom
+  location:
+  - 766.1
+  - 112.15
+  view: 0
+- class: top
+  location:
+  - 413.15
+  - 22.0
+  view: 2
+- class: bottom
+  location:
+  - 435.05
+  - 127.3
+  view: 2
+'451':
+- class: top
+  location:
+  - 944.5
+  - 86.8
+  view: 0
+- class: bottom
+  location:
+  - 886.6
+  - 153.5
+  view: 0
+- class: top
+  location:
+  - 171.9
+  - 155.85
+  view: 2
+- class: bottom
+  location:
+  - 288.9
+  - 224.05
+  view: 2
+- class: top
+  location:
+  - 987
+  - 71
+  view: 1
+- class: bottom
+  location:
+  - 895.55
+  - 158.95
+  view: 1
+- class: top
+  location:
+  - 487
+  - 13
+  view: 3
+- class: bottom
+  location:
+  - 529
+  - 70
+  view: 3
+'497':
+- class: top
+  location:
+  - 968.75
+  - 245.75
+  view: 0
+- class: bottom
+  location:
+  - 897.55
+  - 300.7
+  view: 0
+- class: top
+  location:
+  - 219.8
+  - 305.9
+  view: 2
+- class: bottom
+  location:
+  - 315.95
+  - 342.45
+  view: 2
+- class: top
+  location:
+  - 915.35
+  - 294.2
+  view: 1
+- class: bottom
+  location:
+  - 842
+  - 337
+  view: 1
+- class: top
+  location:
+  - 550
+  - 110
+  view: 3
+- class: bottom
+  location:
+  - 578
+  - 159
+  view: 3
+'52':
+- class: top
+  location:
+  - 650.35
+  - 103.4
+  view: 0
+- class: bottom
+  location:
+  - 580.6
+  - 215.15
+  view: 0
+- class: top
+  location:
+  - 475.3
+  - 55.65
+  view: 2
+- class: bottom
+  location:
+  - 518.95
+  - 112.2
+  view: 2
+'523':
+- class: top
+  location:
+  - 726.65
+  - 164.6
+  view: 0
+- class: bottom
+  location:
+  - 740.05
+  - 235.6
+  view: 0
+- class: top
+  location:
+  - 507.0
+  - 234.3
+  view: 2
+- class: bottom
+  location:
+  - 491.0
+  - 309.35
+  view: 2
+- class: top
+  location:
+  - 803.9
+  - 151.45
+  view: 1
+- class: bottom
+  location:
+  - 796.65
+  - 231.2
+  view: 1
+- class: top
+  location:
+  - 557
+  - 131
+  view: 3
+- class: bottom
+  location:
+  - 576
+  - 187
+  view: 3
+'559':
+- class: top
+  location:
+  - 874.25
+  - 129.55
+  view: 0
+- class: bottom
+  location:
+  - 830.05
+  - 180.25
+  view: 0
+- class: top
+  location:
+  - 213.8
+  - 358.75
+  view: 2
+- class: bottom
+  location:
+  - 349
+  - 405
+  view: 2
+- class: top
+  location:
+  - 1066
+  - 136
+  view: 1
+- class: bottom
+  location:
+  - 987
+  - 200
+  view: 1
+- class: top
+  location:
+  - 376
+  - 102
+  view: 3
+- class: bottom
+  location:
+  - 421
+  - 162
+  view: 3
+'590':
+- class: top
+  location:
+  - 550.0
+  - 38.45
+  view: 3
+- class: bottom
+  location:
+  - 547
+  - 134
+  view: 3
+- class: top
+  location:
+  - 622
+  - 93
+  view: 2
+- class: bottom
+  location:
+  - 608
+  - 203
+  view: 2
+'622':
+- class: top
+  location:
+  - 676.85
+  - 188.4
+  view: 0
+- class: bottom
+  location:
+  - 680.05
+  - 251.9
+  view: 0
+- class: top
+  location:
+  - 608.95
+  - 305.8
+  view: 2
+- class: bottom
+  location:
+  - 590.8
+  - 365.0
+  view: 2
+- class: top
+  location:
+  - 812
+  - 176
+  view: 1
+- class: bottom
+  location:
+  - 794
+  - 242
+  view: 1
+- class: top
+  location:
+  - 525
+  - 212
+  view: 3
+- class: bottom
+  location:
+  - 562
+  - 263
+  view: 3
+'671':
+- class: top
+  location:
+  - 492
+  - 138
+  view: 0
+- class: bottom
+  location:
+  - 452.7
+  - 193.85
+  view: 0
+- class: top
+  location:
+  - 776.7
+  - 159.45
+  view: 2
+- class: bottom
+  location:
+  - 769.3
+  - 192.8
+  view: 2
+- class: top
+  location:
+  - 669.95
+  - 105.55
+  view: 1
+- class: bottom
+  location:
+  - 629
+  - 147
+  view: 1
+- class: top
+  location:
+  - 730
+  - 197
+  view: 3
+- class: bottom
+  location:
+  - 813
+  - 262
+  view: 3
+'737':
+- class: top
+  location:
+  - 584.45
+  - 87.3
+  view: 0
+- class: bottom
+  location:
+  - 546.15
+  - 122.55
+  view: 0
+- class: top
+  location:
+  - 779.5
+  - 147.95
+  view: 2
+- class: bottom
+  location:
+  - 857.05
+  - 206.25
+  view: 2
+- class: top
+  location:
+  - 775.8
+  - 61.4
+  view: 1
+- class: bottom
+  location:
+  - 761.25
+  - 97.0
+  view: 1
+- class: top
+  location:
+  - 512.25
+  - 133.1
+  view: 3
+- class: bottom
+  location:
+  - 527.1
+  - 247.55
+  view: 3
+'776':
+- class: top
+  location:
+  - 463.25
+  - 33.25
+  view: 0
+- class: bottom
+  location:
+  - 463.1
+  - 90.95
+  view: 0
+- class: top
+  location:
+  - 1054.6
+  - 41.75
+  view: 2
+- class: bottom
+  location:
+  - 1053.3
+  - 155.75
+  view: 2
+- class: top
+  location:
+  - 735.05
+  - 7.45
+  view: 1
+- class: bottom
+  location:
+  - 737.8
+  - 61.1
+  view: 1
+- class: top
+  location:
+  - 497
+  - 135
+  view: 3
+- class: bottom
+  location:
+  - 519
+  - 366
+  view: 3
+'809':
+- class: bottom
+  location:
+  - 448.4
+  - 221.4
+  view: 0
+- class: top
+  location:
+  - 423.95
+  - 219.0
+  view: 0
+- class: top
+  location:
+  - 825.6
+  - 230.0
+  view: 2
+- class: bottom
+  location:
+  - 874.7
+  - 278.3
+  view: 2
+- class: top
+  location:
+  - 636.4
+  - 168.05
+  view: 1
+- class: bottom
+  location:
+  - 677.35
+  - 177.2
+  view: 1
+- class: top
+  location:
+  - 831
+  - 372
+  view: 3
+- class: bottom
+  location:
+  - 746
+  - 456
+  view: 3
+'848':
+- class: bottom
+  location:
+  - 451.2
+  - 247.5
+  view: 0
+- class: top
+  location:
+  - 482.5
+  - 236.65
+  view: 0
+- class: top
+  location:
+  - 603.4
+  - 179.85
+  view: 1
+- class: bottom
+  location:
+  - 619.4
+  - 189.05
+  view: 1
+- class: top
+  location:
+  - 816
+  - 229
+  view: 3
+- class: bottom
+  location:
+  - 824
+  - 310
+  view: 3
+'915':
+- class: bottom
+  location:
+  - 759.1
+  - 157.7
+  view: 0
+- class: top
+  location:
+  - 807.8
+  - 118.65
+  view: 0
+- class: top
+  location:
+  - 382
+  - 332
+  view: 2
+- class: bottom
+  location:
+  - 502.6
+  - 356.75
+  view: 2
+- class: top
+  location:
+  - 1004.6
+  - 111.85
+  view: 1
+- class: bottom
+  location:
+  - 929.9
+  - 156.95
+  view: 1
+- class: top
+  location:
+  - 361.0
+  - 116.1
+  view: 3
+- class: bottom
+  location:
+  - 415.25
+  - 173.55
+  view: 3
+'96':
+- class: top
+  location:
+  - 769.75
+  - 149.85
+  view: 0
+- class: bottom
+  location:
+  - 676.35
+  - 308.95
+  view: 0
+- class: top
+  location:
+  - 410.6
+  - 54.1
+  view: 2
+- class: bottom
+  location:
+  - 449.2
+  - 110.5
+  view: 2
+- class: top
+  location:
+  - 329.45
+  - 102.6
+  view: 1
+- class: bottom
+  location:
+  - 355.9
+  - 201.9
+  view: 1
+'972':
+- class: bottom
+  location:
+  - 627.4
+  - 144.05
+  view: 0
+- class: top
+  location:
+  - 608.6
+  - 114.3
+  view: 0
+- class: top
+  location:
+  - 717.85
+  - 184.05
+  view: 2
+- class: bottom
+  location:
+  - 745.15
+  - 281.25
+  view: 2
+- class: top
+  location:
+  - 776.6
+  - 86.35
+  view: 1
+- class: bottom
+  location:
+  - 822
+  - 125
+  view: 1
+- class: top
+  location:
+  - 529
+  - 153
+  view: 3
+- class: bottom
+  location:
+  - 460
+  - 232
+  view: 3
