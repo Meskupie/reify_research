@@ -9,19 +9,21 @@ from calibration import IntrinsicCalibrator
 
 ap = argparse.ArgumentParser()
 ap.add_argument('-d', '--dir', required=True, help='Path to the camera folders')
-ap.add_argument('-c', '--cameras', nargs='+', required=True, help='List of folder names')
+#ap.add_argument('-c', '--cameras', nargs='+', required=True, help='List of folder names')
 ap.add_argument('-e', '--extension', help='Image extension', default='.png')
 ap.add_argument('--height', help='Image height', default=720)
 ap.add_argument('--width', help='Image width', default=1280)
 args = vars(ap.parse_args())
-cameraNames = args['cameras']
-calibrationDir = args['dir']
+#cameraNames = args['cameras']
+calibrationPath = args['dir']
 imageExtension = args['extension']
 displayResolution = (args['width'], args['height'])
 
-basePath = os.path.abspath('')
-calibrationPath = os.path.join(basePath, calibrationDir)
+#basePath = os.path.abspath('')
+#calibrationPath = os.path.join(basePath, calibrationDir)
 calibrator = IntrinsicCalibrator()
+cameraNames = [path.split('/')[-1] for path in glob.glob(os.path.join(calibrationPath,'*'))]
+cameraNames.sort()
 
 for cameraName in cameraNames:
     paramPath = os.path.join(calibrationPath, cameraName, cameraName + '.yaml')
