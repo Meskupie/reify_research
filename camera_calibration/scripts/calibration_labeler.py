@@ -21,6 +21,17 @@ labelsPath = args['labels']
 videoExtension = args['extension']
 videoResolution = np.array((args['width'], args['height']))
 
+print('\n\n\nHey there, need instructions?\n\n' \
+      'Press [a] and [d] to move backwards and forwards one frame\n' \
+      'Press [q] and [e] to move backwards and forwards ten frames\n' \
+      'Press [t] and [g] to switch between existing labels\n' \
+      'Press [z] and [c] to switch between existing views\n' \
+      'Press [esc] to back out and [k] to exit\n\n' \
+      'Click on markers to zoom in, click again to mark a location (or just use auto)\n' \
+      'Once marked, press "r" or "f" to label the mark as a "top" or "bottom" class\n' \
+      'Click on an existing marker to remove it\n')
+
+
 class Labeler():
     def __init__(self, labelsPath):
         self.labelDict = {}
@@ -35,10 +46,8 @@ class Labeler():
             yaml.dump(self.labelDict, file)
 
     def load_labels(self):
-        print('reading file')
         with open(self.labelsPath) as file:
-            self.labelDict = yaml.unsafe_load(file)  # yaml.full_load(file)
-            print(f'loaded file with {len(self.labelDict.keys())} keys')
+            self.labelDict = yaml.full_load(file)
 
     def add_label(self, labelLocation, labelClass):
         global frameIndex, videoIndex
@@ -58,7 +67,7 @@ class Labeler():
             if len(labels) != 0:
                 self.labelDict[str(frameIndex)] = labels
             else:
-                self.labelDict.pop(str(frameIndex),None)
+                self.labelDict.pop(str(frameIndex), None)
         self.save_labels()
 
     def get_labels(self, lockFrame=True, lockView=True):
@@ -77,9 +86,9 @@ class Labeler():
         else:
             raise RuntimeError()  # all labels
 
-    def get_label_distance(self,direction = 0):
+    def get_label_distance(self, direction=0):
         global frameIndex
-        assert direction != 0,"Use direction 1 or -1"
+        assert direction != 0, "Use direction 1 or -1"
         frameList = np.array([int(key) for key in list(self.labelDict.keys())])
         frameList.sort()
         distance = 0
@@ -98,9 +107,10 @@ class Labeler():
 
     def get_image_with_header(self, image):
         global frameIndex, videoIndex
+        fontColor = (153, 51, 0)
         out = image.copy()
         out = cv2.putText(out, f'View {videoIndex + 1} of {len(videoPaths)} at frame {frameIndex}',
-                          (20, 45), cv2.FONT_HERSHEY_SIMPLEX, 1, (179, 72, 19), 2, cv2.LINE_AA, False)
+                          (20, 45), cv2.FONT_HERSHEY_SIMPLEX, 1, fontColor, 2, cv2.LINE_AA, False)
         labels = self.get_labels(lockView=False)
         if len(labels) > 0:
             views = [label["view"] for label in labels]
@@ -108,7 +118,7 @@ class Labeler():
             views.sort()
             out = cv2.putText(out, f'Labeled by view{"s" if len(views) > 0 else ""} ' + ', '.join(
                 [str(view + 1) for view in views]),
-                              (20, 85), cv2.FONT_HERSHEY_SIMPLEX, 1, (179, 72, 19), 2, cv2.LINE_AA, False)
+                              (20, 85), cv2.FONT_HERSHEY_SIMPLEX, 1, fontColor, 2, cv2.LINE_AA, False)
         return out
 
     def get_image_with_labels(self, image):
@@ -136,6 +146,7 @@ def capture_relative_frame(count):
     if frameGrabbed:
         frame = newFrame
         frameHasChanged = True
+
 
 def get_new_video():
     global prevVideoIndex, videoIndex, videoPaths, frameIndex, videoIn
@@ -175,9 +186,9 @@ def process_key(key, validKeys):
     elif ord('m') in validKeys and key == ord('m'):  # Coverage map visualization
         pass
     elif key == 27:
-        if userInterfaceState == 'scrubbing':
-            exit()
         userInterfaceState = 'scrubbing'
+    elif key == ord('k'):
+        exit()
 
 
 def click_event(event, x, y, flags, param):
@@ -216,6 +227,9 @@ labels = {}
 userInterfaceState = 'scrubbing'
 prevVideoIndex = -1
 zoomedFrame = np.zeros(1)
+
+get_new_video()
+capture_relative_frame(labeler.get_label_distance(direction=1))
 
 while (True):
     videoIndex = videoIndex % len(videoPaths)

@@ -1,82 +1,82 @@
 {
-    "sfm_data_version": "0.3",
-    "root_path": "../calibration_data/western_battery_1/calibration_scene_images",
-    "views": [
-        {
-            "key": 3,
-            "value": {
-                "polymorphic_id": 1073741824,
-                "ptr_wrapper": {
-                    "id": 2147483649,
-                    "data": {
-                        "local_path": "",
-                        "filename": "test_scene_4.png",
-                        "width": 1280,
-                        "height": 720,
-                        "id_view": 3,
-                        "id_intrinsic": 4294967295,
-                        "id_pose": 3
-                    }
-                }
-            }
-        },
-        {
-            "key": 2,
-            "value": {
-                "polymorphic_id": 1073741824,
-                "ptr_wrapper": {
-                    "id": 2147483650,
-                    "data": {
-                        "local_path": "",
-                        "filename": "test_scene_3.png",
-                        "width": 1280,
-                        "height": 720,
-                        "id_view": 2,
-                        "id_intrinsic": 4294967295,
-                        "id_pose": 2
-                    }
-                }
-            }
-        },
-        {
-            "key": 1,
-            "value": {
-                "polymorphic_id": 1073741824,
-                "ptr_wrapper": {
-                    "id": 2147483651,
-                    "data": {
-                        "local_path": "",
-                        "filename": "test_scene_2.png",
-                        "width": 1280,
-                        "height": 720,
-                        "id_view": 1,
-                        "id_intrinsic": 4294967295,
-                        "id_pose": 1
-                    }
-                }
-            }
-        },
-        {
-            "key": 0,
-            "value": {
-                "polymorphic_id": 1073741824,
-                "ptr_wrapper": {
-                    "id": 2147483652,
-                    "data": {
-                        "local_path": "",
-                        "filename": "test_scene_1.png",
-                        "width": 1280,
-                        "height": 720,
-                        "id_view": 0,
-                        "id_intrinsic": 4294967295,
-                        "id_pose": 0
-                    }
-                }
-            }
+  "sfm_data_version": "0.3",
+  "root_path": "../calibration_data/western_battery_1/calibration_scene_images",
+  "views": [
+    {
+      "key": 3,
+      "value": {
+        "polymorphic_id": 1073741824,
+        "ptr_wrapper": {
+          "id": 2147483649,
+          "data": {
+            "local_path": "",
+            "filename": "test_scene_4.png",
+            "width": 1280,
+            "height": 720,
+            "id_view": 3,
+            "id_intrinsic": 4294967295,
+            "id_pose": 3
+          }
         }
-    ],
-    "intrinsics": [],
-    "extrinsics": [],
-    "structure": [],
-    "control_points": []
+      }
+    },
+    {
+      "key": 2,
+      "value": {
+        "polymorphic_id": 1073741824,
+        "ptr_wrapper": {
+          "id": 2147483650,
+          "data": {
+            "local_path": "",
+            "filename": "test_scene_3.png",
+            "width": 1280,
+            "height": 720,
+            "id_view": 2,
+            "id_intrinsic": 4294967295,
+            "id_pose": 2
+          }
+        }
+      }
+    },
+    {
+      "key": 1,
+      "value": {
+        "polymorphic_id": 1073741824,
+        "ptr_wrapper": {
+          "id": 2147483651,
+          "data": {
+            "local_path": "",
+            "filename": "test_scene_2.png",
+            "width": 1280,
+            "height": 720,
+            "id_view": 1,
+            "id_intrinsic": 4294967295,
+            "id_pose": 1
+          }
+        }
+      }
+    },
+    {
+      "key": 0,
+      "value": {
+        "polymorphic_id": 1073741824,
+        "ptr_wrapper": {
+          "id": 2147483652,
+          "data": {
+            "local_path": "",
+            "filename": "test_scene_1.png",
+            "width": 1280,
+            "height": 720,
+            "id_view": 0,
+            "id_intrinsic": 4294967295,
+            "id_pose": 0
+          }
+        }
+      }
+    }
+  ],
+  "intrinsics": [],
+  "extrinsics": [],
+  "structure": [],
+  "control_points": []
 }
