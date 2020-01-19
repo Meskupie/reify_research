@@ -99,7 +99,6 @@ class Labeler():
                 distance = frameList[::-1][np.argmax((frameIndex - frameList[::-1]) > 0)] - frameIndex
         return distance
 
-
     def get_image_with_header(self, image):
         global frameIndex, videoIndex
         fontColor = (153, 51, 0)
